@@ -1,0 +1,111 @@
+Step by Step replica set creation  on windows. 
+
+Prerequistites
+*************
+Mongod instance already running on my system with default port 27017.
+
+Location of binary : "C:\Program Files\MongoDB\Server\4.4\bin"
+--dbpath : "C:\Program Files\MongoDB\Server\4.4\data\db"
+--logpath : "C:\Program Files\MongoDB\Server\4.4\log\mongod.log"
+--port        :27017
+--storageEngine : "wiredTiger"
+
+To be created as first slave node
+***************************d
+--dbpath "c:\data1\db"
+--logpath "c:\data1\log\mongod.log"
+--storageEngine "wiredTiger"
+--port 27020
+--replSet testrep
+
+To be created as second slave node
+***************************
+--dbpath "c:\data2\db"
+--logpath "c:\data2\log\mongod.log"
+--storageEngine "wiredTiger"
+--port 27020
+--replSet testrep
+
+
+Step1 : Create below folders for both slave for database file, logfile and configuration files
+               *******************************************************************
+	mkdir  c:\data1\config  c:\data1\db  c:\data1\log
+	mkdir c:\data2\config  c:\data2\db  c:\data2\log
+
+
+ Step2 : Configuration file creation  of First slave node
+               ***************************************
+	cmd > cd c:\data1\log\notepad  c:\data1\config\mongod.cnf 
+		dbpath=c:\data1\db
+		log=c:\data1\log\mongo
+		port=27020
+
+	Configuration file creation  of Second slave node
+	cmd > cd c:\data2\log\notepad  c:\data2\config\mongod.cnf 
+		dbpath=c:\data2\db
+		log=c:\data2\log\mongo
+		port=27030
+
+
+Step 1 ) Stop services of master node which is running via services.msc .
+
+
+Step 2 )start mongod daemon of primary server using below modified command as replicaset
+         
+syntax
+ mongos --dbpath "" --logpath "" --port  --storageEngine=wiredTiger --journal --replSet nameofthereplica
+
+
+ mongod --dbpath "C:\Program Files\MongoDB\Server\4.4\data" --logpath "C:\Program Files\MongoDB\Server\4.4\log\mongod.log" --port 27017 --storageEngine=wiredTiger --journal --replSet  testreplicaset
+ mongo --port 27017
+  show dbs;
+ rsconf={_id:"prodrep", members:[{_id:0,host:"localhost:27017"}]}
+ *****************************************************
+    > rs.initiate(rsconf)
+   press enter again and primary will be prompted .
+   >show dbs;
+
+
+ prepare below config file for first slave node.
+ mongo --dbpath "C:\data1\db" --logpath "C:\data1\log\mongod.log" --port 27020 --storageEngine=wiredTiger --journal --replSet  prodrep
+    verify files apperared in the db location.
+	     prepare below command for second slave node. 
+mongod --dbpath "C:\data2\db" --logpath "C:\data2\log\mongod.log" --port 27030 --storageEngine=wiredTiger --journal --replSet  prodrep
+Add slaves to configuration
+************************
+	primary > rs.add("localhost:27020");
+	>rs.status();
+	>rs.add("localhost:27030")
+	>rs.status();
+
+Login to first salve node as mongoshell
+********************************
+mongo --port 27020
+secondary > show dbs;
+ >rs.slaveOk()
+
+Login to second salve node as mongoshell
+********************************
+mongo --port 27030
+ secondary > show dbs;
+  >rs.slaveOk()
+
+Final step:Testing  of replication fo the database from Primary to secondary Node
+*******************************************************************
+create a newdb on primary and check if that got replicated on first and second slave. 
+primary > show dbs;
+ >use repdb1
+ db.student.insert ({ "name" : "Avi" });
+ show dbs;
+
+ first slave node
+ mongo --port 27020
+ show dbs;
+
+
+ second slave node 
+ mongo --port 27030
+ show dbs;
+
+
+
